@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="artifact-type" content="tool">
+  <meta name="design-style" content="figure">
+  <title>桃園市第六選區得票率預測互動網站（銘傳大學公共事務與行政管理學系__劉祥得製作）</title>
+
+  <!-- Google Fonts: Schibsted Grotesk, Newsreader, Roboto Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Roboto+Mono:ital,wght@0,400..700;1,400..700&family=Schibsted+Grotesk:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+
+  <!-- Chart.js 4.5.1 & Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@1.43.0/dist/umd/lucide.min.js"></script>
+
+  <style>
+    :root {
+      color-scheme: light;
+
+      /* Page and surfaces - Figure Style */
+      --background: #ffffff;
+      --surface-container-low: #f8fafc;
+      --surface-container: #f1f5f9;
+      --surface-container-high: #e2e8f0;
+
+      /* Ink */
+      --on-surface: #0f172a;
+      --on-surface-variant: #475569;
+
+      /* Rules and Outlines */
+      --outline: #94a3b8;
+      --outline-variant: #e2e8f0;
+
+      /* Accents */
+      --primary: #0f172a;
+      --on-primary: #ffffff;
+      --primary-container: #e2e8f0;
+      --on-primary-container: #0f172a;
+
+      /* Candidate & Semantic Tones */
+      --secondary: #1d4ed8;            /* 孫大千 / 國民黨藍 */
+      --tertiary: #047857;             /* 趙正宇 / 泛綠及無黨翠綠 */
+      --warning: #d97706;              /* 第三勢力 / 其他橘黃 */
+      --error: #b91c1c;
+      --positive: #059669;
+      --focus: #2563eb;
+
+      /* Data series tokens */
+      --data-1: #1d4ed8;               /* 孫大千 (藍) */
+      --data-2: #059669;               /* 趙正宇 (綠/無黨) */
+      --data-3: #d97706;               /* 第三勢力/其他 (橘) */
+      --data-context: #94a3b8;          /* 未表態 / 參考線 (灰) */
+
+      /* Fonts */
+      --font-headline: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
+      --font-body: 'Newsreader', Georgia, serif;
+      --font-label: 'Roboto Mono', monospace;
+
+      /* Type scale for Focused Tool */
+      --display-size: clamp(1.625rem, 1.25rem + 1.2vw, 2.25rem);
+      --headline-size: clamp(1.2rem, 1.05rem + 0.5vw, 1.45rem);
+      --subhead-size: clamp(1.05rem, 0.98rem + 0.25vw, 1.15rem);
+      --body-size: clamp(0.9375rem, 0.9rem + 0.15vw, 1rem);
+      --label-size: 0.75rem;
+
+      /* Spacing scale */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2.5rem;
+      --space-2xl: 4rem;
+
+      /* Shape */
+      --rounded: 0.25rem;
+      --rounded-lg: 0.375rem;
+      --rounded-full: 9999px;
+
+      /* Motion */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      --dur-micro: 120ms;
+      --dur-short: 200ms;
+    }
+
+    /* Base reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      overflow-x: clip;
+      margin: 0;
+      padding: 0;
+      background-color: var(--background);
+      color: var(--on-surface);
+      font-family: var(--font-body);
+      font-size: var(--body-size);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header { position: static !important; }
+
+    .page-grid {
+      display: grid;
+      gap: var(--space-lg);
+      padding: var(--space-lg) var(--space-md);
+      max-width: 1320px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    .page-grid * { min-width: 0; }
+
+    /* Typography Utilities */
+    h1, h2, h3, h4, h5 {
+      font-family: var(--font-headline);
+      color: var(--on-surface);
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .display-title {
+      font-size: var(--display-size);
+      line-height: 1.15;
+      font-weight: 800;
+    }
+    .section-title {
+      font-size: var(--headline-size);
+      line-height: 1.25;
+      border-bottom: 2px solid var(--on-surface);
+      padding-bottom: var(--space-xs);
+      margin-bottom: var(--space-md);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .mono-num {
+      font-family: var(--font-label);
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+    .text-muted {
+      color: var(--on-surface-variant);
+      font-size: var(--label-size);
+      font-family: var(--font-label);
+    }
+    .tag-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-label);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border: 1px solid var(--outline-variant);
+      background-color: var(--surface-container-low);
+      color: var(--on-surface-variant);
+      border-radius: var(--rounded);
+      letter-spacing: 0.04em;
+    }
+
+    /* Masthead Banner */
+    .masthead {
+      border-bottom: 3px solid var(--on-surface);
+      padding-bottom: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .academic-byline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-sm);
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+      background-color: var(--surface-container-low);
+      padding: var(--space-xs) var(--space-sm);
+      border-left: 3px solid var(--secondary);
+    }
+
+    /* KPI Summary Hero Cards */
+    .hero-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: var(--space-md);
+    }
+    .kpi-card {
+      background-color: var(--background);
+      border: 1px solid var(--outline-variant);
+      border-top: 4px solid var(--outline);
+      padding: var(--space-md);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: box-shadow var(--dur-short) var(--ease-out);
+    }
+    .kpi-card:hover {
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+    .kpi-card.blue { border-top-color: var(--secondary); }
+    .kpi-card.green { border-top-color: var(--tertiary); }
+    .kpi-card.highlight { border-top-color: var(--on-surface); background-color: var(--surface-container-low); }
+
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: var(--space-xs);
+    }
+    .kpi-name {
+      font-family: var(--font-headline);
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .kpi-party {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      padding: 1px 6px;
+      border-radius: var(--rounded);
+    }
+    .party-kmt { background-color: #dbeafe; color: var(--secondary); }
+    .party-ind { background-color: #d1fae5; color: var(--tertiary); }
+
+    .kpi-main-stat {
+      font-family: var(--font-label);
+      font-size: clamp(2rem, 1.8rem + 1vw, 2.75rem);
+      line-height: 1;
+      font-weight: 700;
+      margin: var(--space-xs) 0;
+    }
+    .kpi-sub-stats {
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px dashed var(--outline-variant);
+      padding-top: var(--space-xs);
+      font-size: 0.825rem;
+      color: var(--on-surface-variant);
+      font-family: var(--font-label);
+    }
+
+    /* Preset Scenarios Strip */
+    .scenario-section {
+      background-color: var(--surface-container-low);
+      border: 1px solid var(--outline-variant);
+      padding: var(--space-md);
+    }
+    .scenario-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-sm);
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+    }
+    .scenario-buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-sm);
+    }
+    .scenario-btn {
+      background-color: var(--background);
+      border: 1px solid var(--outline);
+      color: var(--on-surface);
+      padding: var(--space-sm);
+      text-align: left;
+      cursor: pointer;
+      font-family: var(--font-headline);
+      font-size: 0.85rem;
+      transition: background-color var(--dur-short), border-color var(--dur-short), transform var(--dur-short);
+      border-radius: var(--rounded);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .scenario-btn:hover {
+      background-color: var(--surface-container);
+      border-color: var(--on-surface);
+    }
+    .scenario-btn.active {
+      background-color: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
+    }
+    .scenario-btn.active .scenario-desc {
+      color: #cbd5e1;
+    }
+    .scenario-btn:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .scenario-desc {
+      font-family: var(--font-body);
+      font-size: 0.775rem;
+      color: var(--on-surface-variant);
+      line-height: 1.35;
+    }
+
+    /* Two-Column Tool Workspace */
+    .workspace-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: var(--space-lg);
+      align-items: start;
+    }
+    @media (max-width: 992px) {
+      .workspace-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      background-color: var(--background);
+      border: 1px solid var(--outline-variant);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .control-group-box {
+      border: 1px solid var(--outline-variant);
+      padding: var(--space-md);
+      background-color: var(--background);
+      border-radius: var(--rounded);
+    }
+    .group-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--on-surface);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      margin-bottom: var(--space-sm);
+      padding-bottom: var(--space-xs);
+      border-bottom: 1px solid var(--outline-variant);
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: var(--space-sm);
+    }
+    .slider-label-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.825rem;
+    }
+    .slider-title {
+      font-weight: 600;
+      font-family: var(--font-headline);
+    }
+    .slider-inputs-pair {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .slider-range {
+      flex: 1;
+      height: 6px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .slider-num-input {
+      width: 72px;
+      font-family: var(--font-label);
+      font-size: 0.85rem;
+      padding: 3px 6px;
+      border: 1px solid var(--outline);
+      background-color: var(--background);
+      color: var(--on-surface);
+      border-radius: var(--rounded);
+      text-align: right;
+    }
+    .slider-num-input:focus-visible {
+      outline: 2px solid var(--focus);
+    }
+
+    /* Right Column: Visualizations & Charts */
+    .viz-panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .chart-box {
+      background-color: var(--background);
+      border: 1px solid var(--outline-variant);
+      padding: var(--space-md);
+      position: relative;
+    }
+    .chart-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--outline-variant);
+      padding-bottom: var(--space-xs);
+    }
+    .chart-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .chart-container-min {
+      min-height: 270px;
+      position: relative;
+      width: 100%;
+    }
+
+    /* Margin of Victory & Probability Bar */
+    .win-prob-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      margin-top: var(--space-xs);
+    }
+    .win-prob-meter {
+      height: 28px;
+      background-color: var(--surface-container-high);
+      border: 1px solid var(--outline);
+      display: flex;
+      overflow: hidden;
+      border-radius: var(--rounded);
+    }
+    .prob-seg-sun {
+      background-color: var(--secondary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding-left: 8px;
+      font-family: var(--font-label);
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: width var(--dur-short) var(--ease-out);
+    }
+    .prob-seg-chao {
+      background-color: var(--tertiary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      font-family: var(--font-label);
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: width var(--dur-short) var(--ease-out);
+    }
+
+    /* Regional Breakdown Table */
+    .table-container {
+      overflow-x: auto;
+      margin-top: var(--space-xs);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.825rem;
+      text-align: left;
+    }
+    .data-table th, .data-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--outline-variant);
+    }
+    .data-table th {
+      background-color: var(--surface-container-low);
+      font-family: var(--font-label);
+      color: var(--on-surface-variant);
+      font-weight: 600;
+      border-top: 1px solid var(--outline-variant);
+    }
+    .data-table td.num {
+      text-align: right;
+      font-family: var(--font-label);
+    }
+    .data-table tr:hover td {
+      background-color: var(--surface-container);
+    }
+
+    /* Raw Survey Modal / Collapsible Details */
+    .collapsible-details {
+      border: 1px solid var(--outline-variant);
+      background-color: var(--surface-container-low);
+      border-radius: var(--rounded);
+    }
+    .collapsible-summary {
+      padding: var(--space-sm) var(--space-md);
+      font-family: var(--font-headline);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .collapsible-summary:hover {
+      background-color: var(--surface-container);
+    }
+    .collapsible-body {
+      padding: var(--space-md);
+      border-top: 1px solid var(--outline-variant);
+      background-color: var(--background);
+    }
+
+    /* Buttons */
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: 1px solid var(--outline);
+      background-color: var(--background);
+      color: var(--on-surface);
+      font-family: var(--font-headline);
+      font-size: 0.825rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: var(--rounded);
+      transition: all var(--dur-micro) var(--ease-out);
+    }
+    .action-btn:hover {
+      background-color: var(--surface-container-high);
+      border-color: var(--on-surface);
+    }
+    .action-btn.primary {
+      background-color: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
+    }
+    .action-btn.primary:hover {
+      background-color: #334155;
+    }
+
+    /* Toast Notification */
+    .toast-box {
+      display: none;
+      padding: 8px 14px;
+      background-color: var(--primary);
+      color: var(--on-primary);
+      font-family: var(--font-label);
+      font-size: 0.8rem;
+      border-radius: var(--rounded);
+      margin-top: var(--space-xs);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 640px) {
+      .hero-kpi-grid { grid-template-columns: 1fr; }
+      .scenario-buttons-grid { grid-template-columns: 1fr; }
+      .academic-byline { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-grid">
+
+    <!-- 頁頭與作者署名標題區 -->
+    <header class="masthead">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+        <span class="tag-badge"><i data-lucide="bar-chart-3" style="width:13px; height:13px;"></i> 選民投票傾向實證模擬系統</span>
+        <span class="text-muted">研究樣本 N=1,030 ｜ 95% 信心水準 ±3.05%</span>
+      </div>
+
+      <h1 class="display-title">
+        桃園市第六選區得票率預測互動網站（銘傳大學公共事務與行政管理學系__劉祥得製作）
+      </h1>
+
+      <div class="academic-byline">
+        <span><strong>主持人 / 製作資訊：</strong>銘傳大學公共事務與行政管理學系 劉祥得 教授</span>
+        <span>•</span>
+        <span><strong>涵蓋選區：</strong>八德區、大溪區、復興區、中壢區（興仁里等12里）</span>
+        <span>•</span>
+        <span><strong>方法論架構：</strong>電話訪問民調數據、未表態歸向矩陣、選票轉移率與蒙地卡羅動態模擬</span>
+      </div>
+    </header>
+
+    <!-- 頂部即時核心 KPI 卡片 (Hero Forecast Cards) -->
+    <section class="hero-kpi-grid" aria-label="核心得票率預測">
+      
+      <!-- 孫大千卡片 -->
+      <div class="kpi-card blue">
+        <div class="kpi-header">
+          <span class="kpi-name">孫大千</span>
+          <span class="kpi-party party-kmt">中國國民黨</span>
+        </div>
+        <div class="kpi-main-stat mono-num" id="stat-sun-rate" style="color: var(--secondary);">--%</div>
+        <div class="kpi-sub-stats">
+          <span>預估票數：<strong class="mono-num" id="stat-sun-votes">--</strong> 票</span>
+          <span>95% CI：<span class="mono-num" id="stat-sun-ci">±--%</span></span>
+        </div>
+        <div style="margin-top: 8px; font-size: 0.775rem; color: var(--on-surface-variant);">
+          原始表態率：<span class="mono-num">34.5%</span>（355票）
+        </div>
+      </div>
+
+      <!-- 趙正宇卡片 -->
+      <div class="kpi-card green">
+        <div class="kpi-header">
+          <span class="kpi-name">趙正宇</span>
+          <span class="kpi-party party-ind">無黨籍（泛綠合作）</span>
+        </div>
+        <div class="kpi-main-stat mono-num" id="stat-chao-rate" style="color: var(--tertiary);">--%</div>
+        <div class="kpi-sub-stats">
+          <span>預估票數：<strong class="mono-num" id="stat-chao-votes">--</strong> 票</span>
+          <span>95% CI：<span class="mono-num" id="stat-chao-ci">±--%</span></span>
+        </div>
+        <div style="margin-top: 8px; font-size: 0.775rem; color: var(--on-surface-variant);">
+          原始表態率：<span class="mono-num">20.8%</span>（214票）
+        </div>
+      </div>
+
+      <!-- 第三勢力與其他 -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-name">其他候選人</span>
+          <span class="tag-badge">呂東杰/賴維哲/其他</span>
+        </div>
+        <div class="kpi-main-stat mono-num" id="stat-other-rate" style="color: var(--warning);">--%</div>
+        <div class="kpi-sub-stats">
+          <span>預估票數：<strong class="mono-num" id="stat-other-votes">--</strong> 票</span>
+          <span>原始總計：<span class="mono-num">7.2%</span>（74票）</span>
+        </div>
+        <div style="margin-top: 8px; font-size: 0.775rem; color: var(--on-surface-variant);">
+          未表態選民規模：<strong class="mono-num">37.6%</strong>（387人）
+        </div>
+      </div>
+
+      <!-- 勝選機率與預測判定 -->
+      <div class="kpi-card highlight">
+        <div class="kpi-header">
+          <span class="kpi-name">勝選機率評估</span>
+          <span class="tag-badge" id="badge-verdict">即時試算</span>
+        </div>
+        <div class="win-prob-wrapper">
+          <div style="display: flex; justify-content: space-between; font-family: var(--font-label); font-size: 0.775rem; font-weight: 600;">
+            <span style="color: var(--secondary);">孫大千：<span id="label-prob-sun">--%</span></span>
+            <span style="color: var(--tertiary);">趙正宇：<span id="label-prob-chao">--%</span></span>
+          </div>
+          <div class="win-prob-meter">
+            <div class="prob-seg-sun" id="meter-prob-sun" style="width: 50%;">孫 50%</div>
+            <div class="prob-seg-chao" id="meter-prob-chao" style="width: 50%;">趙 50%</div>
+          </div>
+        </div>
+        <div class="kpi-sub-stats" style="margin-top: 8px;">
+          <span>領先幅度：<strong class="mono-num" id="stat-lead-margin">--</strong></span>
+          <span id="stat-model-status">蒙地卡羅 N=1,000次</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 典型選舉情境模擬快捷列 -->
+    <section class="scenario-section">
+      <div class="scenario-label-row">
+        <div>
+          <strong style="font-family: var(--font-headline); font-size: 0.95rem;">
+            <i data-lucide="sparkles" style="width:14px; height:14px; display:inline-block; vertical-align:middle;"></i>
+            預測情境模擬（點擊即時套用政治計量情境）
+          </strong>
+          <span class="text-muted" style="margin-left: 8px;">可點選經典情境或於下方自由微調滑桿</span>
+        </div>
+        <div>
+          <button class="action-btn" type="button" onclick="resetDefaults()">
+            <i data-lucide="rotate-ccw" style="width:13px; height:13px;"></i> 還原基準值
+          </button>
+        </div>
+      </div>
+
+      <div class="scenario-buttons-grid">
+        <button class="scenario-btn active" id="btn-scen-1" type="button" onclick="applyScenario(1)">
+          <strong>情境 1：原始民調等比例歸向</strong>
+          <span class="scenario-desc">未表態選民按既有比例分流，藍營組織完全凝聚，孫大千大幅領先。</span>
+        </button>
+
+        <button class="scenario-btn" id="btn-scen-2" type="button" onclick="applyScenario(2)">
+          <strong>情境 2：在野大整合與本土藍分裂</strong>
+          <span class="scenario-desc">趙正宇吸納 95% 泛綠選票與 18% 本土藍營基層，未表態多數轉向在野，逆轉勝出。</span>
+        </button>
+
+        <button class="scenario-btn" id="btn-scen-3" type="button" onclick="applyScenario(3)">
+          <strong>情境 3：藍營鐵票全面回流歸隊</strong>
+          <span class="scenario-desc">泛藍支持者高度團結（流失率僅5%），未表態選民過半回歸深藍基本盤。</span>
+        </button>
+
+        <button class="scenario-btn" id="btn-scen-4" type="button" onclick="applyScenario(4)">
+          <strong>情境 4：第三勢力棄保與青年集結</strong>
+          <span class="scenario-desc">第三勢力（綠社盟、時力）65% 策略轉投趙正宇，未表態中立選民顯著流向無黨籍。</span>
+        </button>
+
+        <button class="scenario-btn" id="btn-scen-5" type="button" onclick="applyScenario(5)">
+          <strong>情境 5：高未表態率下的極限五五波</strong>
+          <span class="scenario-desc">雙方進入誤差範圍內的深水區激戰，得票率極度緊繃，勝負取決於最後投票率。</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 主要操作區：左側滑桿控制項 ＋ 右側即時圖表 -->
+    <div class="workspace-layout">
+
+      <!-- 左側：動態參數控制面板 -->
+      <section class="controls-panel" aria-label="模型參數滑桿控制">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="font-size:1.15rem; font-family:var(--font-headline); font-weight:700;">
+            <i data-lucide="sliders" style="width:16px; height:16px; display:inline-block; vertical-align:text-bottom;"></i>
+            動態模擬控制台
+          </h2>
+          <span class="tag-badge">雙向同步連動</span>
+        </div>
+
+        <!-- 模組 1：未表態選民歸向控制 -->
+        <div class="control-group-box">
+          <div class="group-title">
+            <span>一、未表態選民（37.6%，387人）流向分配</span>
+          </div>
+          <p style="font-size:0.8rem; color:var(--on-surface-variant); margin-top:0; margin-bottom:var(--space-sm);">
+            民調中「未決定16.8% + 不清楚15.1% + 無意見4.9% + 拒答0.8%」合計達 37.6%，是勝負最大變數。
+          </p>
+
+          <!-- 孫大千分得未表態 -->
+          <div class="slider-row">
+            <div class="slider-label-line">
+              <span class="slider-title" style="color:var(--secondary);">流向孫大千比例</span>
+              <span class="text-muted"><span class="mono-num" id="txt-undecided-sun">35.0</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-undecided-sun" min="0" max="80" step="1" value="35" class="slider-range" oninput="syncUndecidedSunSlider(this.value)">
+              <input type="number" id="num-undecided-sun" min="0" max="80" step="1" value="35" class="slider-num-input" oninput="syncUndecidedSunNumber(this.value)">
+            </div>
+          </div>
+
+          <!-- 趙正宇分得未表態 -->
+          <div class="slider-row">
+            <div class="slider-label-line">
+              <span class="slider-title" style="color:var(--tertiary);">流向趙正宇比例</span>
+              <span class="text-muted"><span class="mono-num" id="txt-undecided-chao">45.0</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-undecided-chao" min="0" max="80" step="1" value="45" class="slider-range" oninput="syncUndecidedChaoSlider(this.value)">
+              <input type="number" id="num-undecided-chao" min="0" max="80" step="1" value="45" class="slider-num-input" oninput="syncUndecidedChaoNumber(this.value)">
+            </div>
+          </div>
+
+          <!-- 第三勢力分得未表態 -->
+          <div class="slider-row">
+            <div class="slider-label-line">
+              <span class="slider-title">流向第三勢力 / 其他候選人</span>
+              <span class="text-muted"><span class="mono-num" id="txt-undecided-other">5.0</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-undecided-other" min="0" max="30" step="1" value="5" class="slider-range" oninput="syncUndecidedOtherSlider(this.value)">
+              <input type="number" id="num-undecided-other" min="0" max="30" step="1" value="5" class="slider-num-input" oninput="syncUndecidedOtherNumber(this.value)">
+            </div>
+          </div>
+
+          <!-- 最終未去投票/廢票 -->
+          <div class="slider-row" style="margin-bottom:0;">
+            <div class="slider-label-line">
+              <span class="slider-title">未表態者最終未投票 / 廢票率</span>
+              <span class="text-muted"><span class="mono-num" id="txt-undecided-abstain">15.0</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-undecided-abstain" min="0" max="50" step="1" value="15" class="slider-range" oninput="syncUndecidedAbstainSlider(this.value)">
+              <input type="number" id="num-undecided-abstain" min="0" max="50" step="1" value="15" class="slider-num-input" oninput="syncUndecidedAbstainNumber(this.value)">
+            </div>
+          </div>
+          <div style="font-size:0.75rem; color:var(--on-surface-variant); margin-top:6px; font-family:var(--font-label);">
+            歸向總和配平狀態：<span id="alloc-sum-badge" style="font-weight:600; color:var(--positive);">100% (有效封閉配平)</span>
+          </div>
+        </div>
+
+        <!-- 模組 2：選票轉移率與跨黨派流向矩陣 -->
+        <div class="control-group-box">
+          <div class="group-title">
+            <span>二、選票轉移率矩陣（組織撬動與棄保效應）</span>
+          </div>
+          <p style="font-size:0.8rem; color:var(--on-surface-variant); margin-top:0; margin-bottom:var(--space-sm);">
+            依據受訪者政黨偏好（國民黨61.0%, 民進黨17.6%, 親民黨12.8%）與政治組織板塊設定轉移強度。
+          </p>
+
+          <!-- 藍營支持者轉向趙正宇比例 (本土藍分裂) -->
+          <div class="slider-row">
+            <div class="slider-label-line">
+              <span class="slider-title">藍營支持者轉投趙正宇（本土藍外溢率）</span>
+              <span class="text-muted"><span class="mono-num" id="txt-blue-defection">14.0</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-blue-defection" min="0" max="40" step="1" value="14" class="slider-range" oninput="syncBlueDefectionSlider(this.value)">
+              <input type="number" id="num-blue-defection" min="0" max="40" step="1" value="14" class="slider-num-input" oninput="syncBlueDefectionNumber(this.value)">
+            </div>
+          </div>
+
+          <!-- 綠營集結支持趙正宇整合率 -->
+          <div class="slider-row">
+            <div class="slider-label-line">
+              <span class="slider-title">泛綠支持者集結投趙正宇（整合貫徹率）</span>
+              <span class="text-muted"><span class="mono-num" id="txt-green-loyalty">92.0</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-green-loyalty" min="50" max="100" step="1" value="92" class="slider-range" oninput="syncGreenLoyaltySlider(this.value)">
+              <input type="number" id="num-green-loyalty" min="50" max="100" step="1" value="92" class="slider-num-input" oninput="syncGreenLoyaltyNumber(this.value)">
+            </div>
+          </div>
+
+          <!-- 第三勢力棄保轉向趙正宇 -->
+          <div class="slider-row">
+            <div class="slider-label-line">
+              <span class="slider-title">第三勢力（呂/賴/其他）棄保轉向趙正宇</span>
+              <span class="text-muted"><span class="mono-num" id="txt-third-to-chao">45.0</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-third-to-chao" min="0" max="80" step="1" value="45" class="slider-range" oninput="syncThirdChaoSlider(this.value)">
+              <input type="number" id="num-third-to-chao" min="0" max="80" step="1" value="45" class="slider-num-input" oninput="syncThirdChaoNumber(this.value)">
+            </div>
+          </div>
+
+          <!-- 第三勢力棄保轉向孫大千 -->
+          <div class="slider-row" style="margin-bottom:0;">
+            <div class="slider-label-line">
+              <span class="slider-title">第三勢力轉向孫大千</span>
+              <span class="text-muted"><span class="mono-num" id="txt-third-to-sun">15.0</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-third-to-sun" min="0" max="50" step="1" value="15" class="slider-range" oninput="syncThirdSunSlider(this.value)">
+              <input type="number" id="num-third-to-sun" min="0" max="50" step="1" value="15" class="slider-num-input" oninput="syncThirdSunNumber(this.value)">
+            </div>
+          </div>
+        </div>
+
+        <!-- 模組 3：整體投票率與行政區動能權重 -->
+        <div class="control-group-box">
+          <div class="group-title">
+            <span>三、總投票率與各行政區動員強度加權</span>
+          </div>
+
+          <!-- 選區整體投票率 -->
+          <div class="slider-row">
+            <div class="slider-label-line">
+              <span class="slider-title">立委選舉整體投票率</span>
+              <span class="text-muted"><span class="mono-num" id="txt-turnout-rate">66.5</span>%</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-turnout-rate" min="50" max="80" step="0.5" value="66.5" class="slider-range" oninput="syncTurnoutSlider(this.value)">
+              <input type="number" id="num-turnout-rate" min="50" max="80" step="0.5" value="66.5" class="slider-num-input" oninput="syncTurnoutNumber(this.value)">
+            </div>
+          </div>
+
+          <!-- 八德區投票動能 (趙大本營) -->
+          <div class="slider-row" style="margin-bottom:0;">
+            <div class="slider-label-line">
+              <span class="slider-title">八德區（佔51.7%樣本）動員乘數</span>
+              <span class="text-muted"><span class="mono-num" id="txt-weight-bade">1.03</span>x</span>
+            </div>
+            <div class="slider-inputs-pair">
+              <input type="range" id="slider-weight-bade" min="0.8" max="1.2" step="0.01" value="1.03" class="slider-range" oninput="syncWeightBadeSlider(this.value)">
+              <input type="number" id="num-weight-bade" min="0.8" max="1.2" step="0.01" value="1.03" class="slider-num-input" oninput="syncWeightBadeNumber(this.value)">
+            </div>
+          </div>
+        </div>
+
+        <!-- 儲存與匯出控制 -->
+        <div style="display:flex; gap:var(--space-sm); flex-wrap:wrap;">
+          <button class="action-btn primary" type="button" onclick="exportForecastReport()">
+            <i data-lucide="download" style="width:14px; height:14px;"></i> 匯出預測摘要
+          </button>
+          <button class="action-btn" type="button" onclick="copyForecastSummary()">
+            <i data-lucide="copy" style="width:14px; height:14px;"></i> 複製情境數據
+          </button>
+        </div>
+        <div class="toast-box" id="toast-msg">已將當前模型試算結果複製至剪貼簿！</div>
+
+      </section>
+
+      <!-- 右側：即時數據視覺化與統計檢視 -->
+      <section class="viz-panel" aria-label="得票率與勝選率視覺化">
+        
+        <!-- 圖表 A：候選人預估得票率與得票數比較 -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <span class="chart-title">得票率預測比較（含原始民調對照）</span>
+            <span class="tag-badge">即時反應滑桿</span>
+          </div>
+          <div class="chart-container-min" style="min-height: 250px;">
+            <canvas id="chart-vote-share"></canvas>
+          </div>
+        </div>
+
+        <!-- 圖表 B：蒙地卡羅勝率與得票差距分佈直方圖 -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <span class="chart-title">蒙地卡羅得票差距模擬分佈（N=1,000次試驗）</span>
+            <span class="text-muted">模擬抽樣誤差與轉移波動</span>
+          </div>
+          <div class="chart-container-min" style="min-height: 250px;">
+            <canvas id="chart-monte-carlo"></canvas>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:0.75rem; color:var(--on-surface-variant); font-family:var(--font-label);">
+            <span>← 孫大千領先區間</span>
+            <span>中立臨界點（0% 差距）</span>
+            <span>趙正宇領先區間 →</span>
+          </div>
+        </div>
+
+        <!-- 圖表 C：四大行政區得票結構試算 -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <span class="chart-title">四行政區域得票率預估結構</span>
+            <span class="text-muted">八德 / 大溪 / 中壢興仁等 / 復興</span>
+          </div>
+          <div class="chart-container-min" style="min-height: 230px;">
+            <canvas id="chart-district-breakdown"></canvas>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- 底部：選區行政區域分析與民調原始次數分配對照表 -->
+    <section class="chart-box" style="margin-top: var(--space-md);">
+      <div class="section-title">
+        <span>區域樣本結構與模型推估得票分配</span>
+        <span class="tag-badge">選區合格選民基數約 268,000 人</span>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table" aria-label="各行政區得票預估表">
+          <thead>
+            <tr>
+              <th>區域代碼 (vB)</th>
+              <th>戶籍行政區域</th>
+              <th class="num">有效樣本數 (N)</th>
+              <th class="num">原始樣本佔比</th>
+              <th class="num">推估合格選民</th>
+              <th class="num">孫大千 預估得票率 (票數)</th>
+              <th class="num">趙正宇 預估得票率 (票數)</th>
+              <th class="num">區域領先者</th>
+            </tr>
+          </thead>
+          <tbody id="district-table-body">
+            <!-- 動態生成表格列 -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 原始電訪民調數據匯入與去重檢核紀錄 -->
+    <section class="collapsible-details" style="margin-top: var(--space-md);">
+      <details>
+        <summary class="collapsible-summary">
+          <span><i data-lucide="database" style="width:14px; height:14px; display:inline-block; vertical-align:text-bottom;"></i> 原始電訪資料匯入檢核與政黨偏好次數分配（點擊展開研究檔案）</span>
+          <span class="text-muted">來源：桃園市第六選區.DAT (Big5) ｜ N=1,030</span>
+        </summary>
+        <div class="collapsible-body">
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:var(--space-md); font-size:0.85rem;">
+            
+            <!-- 投票傾向原始次數 -->
+            <div>
+              <strong style="font-family:var(--font-headline); display:block; margin-bottom:6px; border-bottom:1px solid var(--outline-variant); padding-bottom:4px;">
+                一、立委選舉投票傾向 (v01 原始次數分配)
+              </strong>
+              <table class="data-table">
+                <thead><tr><th>編碼與候選人</th><th class="num">樣本數</th><th class="num">百分比</th></tr></thead>
+                <tbody>
+                  <tr><td>1. 孫大千</td><td class="num">355</td><td class="num">34.5%</td></tr>
+                  <tr><td>2. 趙正宇</td><td class="num">214</td><td class="num">20.8%</td></tr>
+                  <tr><td>3. 呂東杰</td><td class="num">16</td><td class="num">1.6%</td></tr>
+                  <tr><td>4. 賴維哲</td><td class="num">23</td><td class="num">2.2%</td></tr>
+                  <tr><td>5. 藍大山</td><td class="num">2</td><td class="num">0.2%</td></tr>
+                  <tr><td>6. 未決定</td><td class="num">173</td><td class="num">16.8%</td></tr>
+                  <tr><td>7. 其他</td><td class="num">33</td><td class="num">3.2%</td></tr>
+                  <tr><td>95. 拒答</td><td class="num">8</td><td class="num">0.8%</td></tr>
+                  <tr><td>96. 不清楚、不知道</td><td class="num">156</td><td class="num">15.1%</td></tr>
+                  <tr><td>97. 無意見</td><td class="num">50</td><td class="num">4.9%</td></tr>
+                  <tr style="font-weight:700;"><td>合計有效樣本</td><td class="num">1,030</td><td class="num">100.0%</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 政黨偏好原始次數 -->
+            <div>
+              <strong style="font-family:var(--font-headline); display:block; margin-bottom:6px; border-bottom:1px solid var(--outline-variant); padding-bottom:4px;">
+                二、受訪者政黨偏好 (v13 原始次數分配)
+              </strong>
+              <table class="data-table">
+                <thead><tr><th>政黨名稱</th><th class="num">樣本數</th><th class="num">百分比</th></tr></thead>
+                <tbody>
+                  <tr><td>1. 中國國民黨</td><td class="num">628</td><td class="num">61.0%</td></tr>
+                  <tr><td>2. 民主進步黨</td><td class="num">181</td><td class="num">17.6%</td></tr>
+                  <tr><td>3. 親民黨</td><td class="num">132</td><td class="num">12.8%</td></tr>
+                  <tr><td>4. 台灣團結聯盟</td><td class="num">43</td><td class="num">4.2%</td></tr>
+                  <tr><td>5. 新黨</td><td class="num">35</td><td class="num">3.4%</td></tr>
+                  <tr><td>95-97. 拒答/無意見</td><td class="num">11</td><td class="num">1.1%</td></tr>
+                  <tr style="font-weight:700;"><td>泛藍陣營合計 (國+親+新)</td><td class="num">795</td><td class="num">77.2%</td></tr>
+                  <tr style="font-weight:700;"><td>泛綠陣營合計 (民+台聯)</td><td class="num">224</td><td class="num">21.8%</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 檢核筆記 -->
+            <div>
+              <strong style="font-family:var(--font-headline); display:block; margin-bottom:6px; border-bottom:1px solid var(--outline-variant); padding-bottom:4px;">
+                三、資料檢核與研究方法備忘錄
+              </strong>
+              <ul style="padding-left:18px; margin:0; line-height:1.6; color:var(--on-surface-variant); font-size:0.8rem;">
+                <li><strong>重複列清洗：</strong>原始 <code>.DAT</code> 檔總計 2,060 列，經逐欄比對確認為 1,030 筆不重複紀錄重複匯出。本研究完全以首度出現之有效不重複樣本（$N=1,030$）為運算基底。</li>
+                <li><strong>性別與區域代表性：</strong>八德區佔 51.7%（533人）、大溪區 24.0%（247人）、中壢興仁等12里 20.4%（210人）、復興區 2.8%（29人）。性別比例填答有效樣本中男性 55.0%、女性 45.0%。</li>
+                <li><strong>電話調查結構特徵：</strong>家戶電話樣本中泛藍政黨認同偏高（61.0% 自認偏國民黨），因此趙正宇能否當選，關鍵即在於<strong>「泛藍選票轉移率（本土藍分裂）能否突破 12%」</strong>與<strong>「未表態族群（37.6%）的實際流向」</strong>。</li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 頁尾署名與版權宣告 -->
+    <footer style="border-top:1px solid var(--outline-variant); padding-top:var(--space-md); margin-top:var(--space-lg); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+      <span class="text-muted">桃園市第六選區得票率預測互動網站 ｜ 銘傳大學公共事務與行政管理學系 劉祥得製作</span>
+      <span class="tag-badge">嚴謹政治計量學術研究模型</span>
+    </footer>
+
+  </div>
+
+  <!-- State persistence shim placeholder for Gemini Notebook -->
+  <api-shim></api-shim>
+
+  <script>
+    // --- 基礎研究數據常數 (基於 N=1,030) ---
+    const SURVEY_TOTAL = 1030;
+    const RAW_VOTES = {
+      sun: 355,       // 孫大千 34.5%
+      chao: 214,      // 趙正宇 20.8%
+      lv: 16,         // 呂東杰 1.6%
+      lai: 23,        // 賴維哲 2.2%
+      lan: 2,         // 藍大山 0.2%
+      other_cand: 33, // 其他 3.2%
+      undecided: 173, // 未決定 16.8%
+      refused: 8,     // 拒答 0.8%
+      dont_know: 156, // 不知道 15.1%
+      no_opinion: 50  // 無意見 4.9%
+    };
+
+    // 未表態總人數 = 173 + 8 + 156 + 50 = 387 (37.57%)
+    const UNDECIDED_TOTAL = RAW_VOTES.undecided + RAW_VOTES.refused + RAW_VOTES.dont_know + RAW_VOTES.no_opinion; // 387
+    // 第三勢力及其他總人數 = 16 + 23 + 2 + 33 = 74 (7.18%)
+    const THIRD_TOTAL = RAW_VOTES.lv + RAW_VOTES.lai + RAW_VOTES.lan + RAW_VOTES.other_cand; // 74
+
+    // 行政區次群體統計常數
+    const DISTRICT_DATA = [
+      { code: 1, name: '八德區', n: 533, pct: 0.5175, electorate: 138600, sunRaw: 165, chaoRaw: 132, thirdRaw: 38, undecRaw: 198 },
+      { code: 2, name: '大溪區', n: 247, pct: 0.2398, electorate: 64300, sunRaw: 88, chaoRaw: 48, thirdRaw: 18, undecRaw: 93 },
+      { code: 4, name: '中壢區(興仁里等12里)', n: 210, pct: 0.2039, electorate: 54600, sunRaw: 89, chaoRaw: 31, thirdRaw: 15, undecRaw: 75 },
+      { code: 3, name: '復興區', n: 29, pct: 0.0282, electorate: 7600, sunRaw: 11, chaoRaw: 2, thirdRaw: 2, undecRaw: 14 },
+      { code: 5, name: '其他區域/校正', n: 11, pct: 0.0106, electorate: 2900, sunRaw: 2, chaoRaw: 1, thirdRaw: 1, undecRaw: 7 }
+    ];
+
+    const TOTAL_ELECTORATE = 268000; // 桃園六選區總投票人口估計約 26.8 萬
+
+    // --- 模型狀態變數 ---
+    let appState = {
+      // 模組一：未表態選民流向 (%)
+      undecidedSun: 35.0,
+      undecidedChao: 45.0,
+      undecidedOther: 5.0,
+      undecidedAbstain: 15.0,
+
+      // 模組二：轉移率矩陣 (%)
+      blueDefection: 14.0,   // 藍營支持者轉向趙正宇比例 (本土藍分裂)
+      greenLoyalty: 92.0,    // 綠營貫徹投趙正宇
+      thirdToChao: 45.0,     // 第三勢力轉投趙正宇
+      thirdToSun: 15.0,      // 第三勢力轉投孫大千
+
+      // 模組三：投票率與動能加權
+      turnoutRate: 66.5,     // 總投票率 (%)
+      weightBade: 1.03,      // 八德區動員乘數
+
+      // 當前選擇的情境 (1-5, 或 0 自訂)
+      activeScenario: 1
+    };
+
+    // Chart.js 實例變數
+    let voteShareChartInstance = null;
+    let monteCarloChartInstance = null;
+    let districtChartInstance = null;
+
+    // --- Dual-Input Slider/Number 同步控制函數 (嚴格分開 handler) ---
+    function syncUndecidedSunSlider(val) {
+      const num = parseFloat(val);
+      appState.undecidedSun = num;
+      const elNum = document.getElementById('num-undecided-sun');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-undecided-sun');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncUndecidedSunNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (num < 0) num = 0;
+      if (num > 80) num = 80;
+      appState.undecidedSun = num;
+      const elSlider = document.getElementById('slider-undecided-sun');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-undecided-sun');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    function syncUndecidedChaoSlider(val) {
+      const num = parseFloat(val);
+      appState.undecidedChao = num;
+      const elNum = document.getElementById('num-undecided-chao');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-undecided-chao');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncUndecidedChaoNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (num < 0) num = 0;
+      if (num > 80) num = 80;
+      appState.undecidedChao = num;
+      const elSlider = document.getElementById('slider-undecided-chao');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-undecided-chao');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    function syncUndecidedOtherSlider(val) {
+      const num = parseFloat(val);
+      appState.undecidedOther = num;
+      const elNum = document.getElementById('num-undecided-other');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-undecided-other');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncUndecidedOtherNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (num < 0) num = 0;
+      if (num > 40) num = 40;
+      appState.undecidedOther = num;
+      const elSlider = document.getElementById('slider-undecided-other');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-undecided-other');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    function syncUndecidedAbstainSlider(val) {
+      const num = parseFloat(val);
+      appState.undecidedAbstain = num;
+      const elNum = document.getElementById('num-undecided-abstain');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-undecided-abstain');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncUndecidedAbstainNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (num < 0) num = 0;
+      if (num > 60) num = 60;
+      appState.undecidedAbstain = num;
+      const elSlider = document.getElementById('slider-undecided-abstain');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-undecided-abstain');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    // 模組二同步
+    function syncBlueDefectionSlider(val) {
+      const num = parseFloat(val);
+      appState.blueDefection = num;
+      const elNum = document.getElementById('num-blue-defection');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-blue-defection');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncBlueDefectionNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (num < 0) num = 0;
+      if (num > 50) num = 50;
+      appState.blueDefection = num;
+      const elSlider = document.getElementById('slider-blue-defection');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-blue-defection');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    function syncGreenLoyaltySlider(val) {
+      const num = parseFloat(val);
+      appState.greenLoyalty = num;
+      const elNum = document.getElementById('num-green-loyalty');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-green-loyalty');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncGreenLoyaltyNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (num < 40) num = 40;
+      if (num > 100) num = 100;
+      appState.greenLoyalty = num;
+      const elSlider = document.getElementById('slider-green-loyalty');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-green-loyalty');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    function syncThirdChaoSlider(val) {
+      const num = parseFloat(val);
+      appState.thirdToChao = num;
+      const elNum = document.getElementById('num-third-to-chao');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-third-to-chao');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncThirdChaoNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (num < 0) num = 0;
+      if (num > 90) num = 90;
+      appState.thirdToChao = num;
+      const elSlider = document.getElementById('slider-third-to-chao');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-third-to-chao');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    function syncThirdSunSlider(val) {
+      const num = parseFloat(val);
+      appState.thirdToSun = num;
+      const elNum = document.getElementById('num-third-to-sun');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-third-to-sun');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncThirdSunNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (num < 0) num = 0;
+      if (num > 60) num = 60;
+      appState.thirdToSun = num;
+      const elSlider = document.getElementById('slider-third-to-sun');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-third-to-sun');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    // 模組三同步
+    function syncTurnoutSlider(val) {
+      const num = parseFloat(val);
+      appState.turnoutRate = num;
+      const elNum = document.getElementById('num-turnout-rate');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-turnout-rate');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncTurnoutNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 50;
+      if (num < 45) num = 45;
+      if (num > 85) num = 85;
+      appState.turnoutRate = num;
+      const elSlider = document.getElementById('slider-turnout-rate');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-turnout-rate');
+      if (elTxt) elTxt.textContent = num.toFixed(1);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    function syncWeightBadeSlider(val) {
+      const num = parseFloat(val);
+      appState.weightBade = num;
+      const elNum = document.getElementById('num-weight-bade');
+      if (elNum) elNum.value = num;
+      const elTxt = document.getElementById('txt-weight-bade');
+      if (elTxt) elTxt.textContent = num.toFixed(2);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+    function syncWeightBadeNumber(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 1.0;
+      if (num < 0.7) num = 0.7;
+      if (num > 1.3) num = 1.3;
+      appState.weightBade = num;
+      const elSlider = document.getElementById('slider-weight-bade');
+      if (elSlider) elSlider.value = num;
+      const elTxt = document.getElementById('txt-weight-bade');
+      if (elTxt) elTxt.textContent = num.toFixed(2);
+      appState.activeScenario = 0;
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    // --- 情境快捷套用 ---
+    function applyScenario(id) {
+      appState.activeScenario = id;
+      if (id === 1) {
+        // 情境 1：原始民調等比例歸向
+        appState.undecidedSun = 55.0;
+        appState.undecidedChao = 33.0;
+        appState.undecidedOther = 4.0;
+        appState.undecidedAbstain = 8.0;
+        appState.blueDefection = 0.0;
+        appState.greenLoyalty = 90.0;
+        appState.thirdToChao = 25.0;
+        appState.thirdToSun = 25.0;
+        appState.turnoutRate = 66.0;
+        appState.weightBade = 1.0;
+      } else if (id === 2) {
+        // 情境 2：在野大整合與泛藍分裂 (歷史真實選情走勢)
+        appState.undecidedSun = 32.0;
+        appState.undecidedChao = 52.0;
+        appState.undecidedOther = 4.0;
+        appState.undecidedAbstain = 12.0;
+        appState.blueDefection = 18.0; // 泛藍基層轉向趙
+        appState.greenLoyalty = 96.0;
+        appState.thirdToChao = 65.0;
+        appState.thirdToSun = 10.0;
+        appState.turnoutRate = 67.5;
+        appState.weightBade = 1.05;
+      } else if (id === 3) {
+        // 情境 3：藍營鐵票全面回流歸隊
+        appState.undecidedSun = 52.0;
+        appState.undecidedChao = 35.0;
+        appState.undecidedOther = 3.0;
+        appState.undecidedAbstain = 10.0;
+        appState.blueDefection = 4.0;
+        appState.greenLoyalty = 85.0;
+        appState.thirdToChao = 30.0;
+        appState.thirdToSun = 30.0;
+        appState.turnoutRate = 68.0;
+        appState.weightBade = 0.98;
+      } else if (id === 4) {
+        // 情境 4：第三勢力棄保發酵
+        appState.undecidedSun = 38.0;
+        appState.undecidedChao = 48.0;
+        appState.undecidedOther = 2.0;
+        appState.undecidedAbstain = 12.0;
+        appState.blueDefection = 12.0;
+        appState.greenLoyalty = 92.0;
+        appState.thirdToChao = 75.0;
+        appState.thirdToSun = 10.0;
+        appState.turnoutRate = 66.5;
+        appState.weightBade = 1.02;
+      } else if (id === 5) {
+        // 情境 5：極限五五波拉鋸
+        appState.undecidedSun = 38.5;
+        appState.undecidedChao = 46.5;
+        appState.undecidedOther = 3.0;
+        appState.undecidedAbstain = 12.0;
+        appState.blueDefection = 13.5;
+        appState.greenLoyalty = 92.0;
+        appState.thirdToChao = 50.0;
+        appState.thirdToSun = 20.0;
+        appState.turnoutRate = 66.5;
+        appState.weightBade = 1.01;
+      }
+
+      updateAllControlInputs();
+      updateScenarioButtonStyles();
+      recalculateAll();
+    }
+
+    function resetDefaults() {
+      applyScenario(1);
+    }
+
+    function updateScenarioButtonStyles() {
+      for (let i = 1; i <= 5; i++) {
+        const btn = document.getElementById(`btn-scen-${i}`);
+        if (!btn) continue;
+        if (appState.activeScenario === i) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      }
+    }
+
+    function updateAllControlInputs() {
+      // 模組一
+      const sUS = document.getElementById('slider-undecided-sun');
+      const nUS = document.getElementById('num-undecided-sun');
+      const tUS = document.getElementById('txt-undecided-sun');
+      if (sUS) sUS.value = appState.undecidedSun;
+      if (nUS) nUS.value = appState.undecidedSun;
+      if (tUS) tUS.textContent = appState.undecidedSun.toFixed(1);
+
+      const sUC = document.getElementById('slider-undecided-chao');
+      const nUC = document.getElementById('num-undecided-chao');
+      const tUC = document.getElementById('txt-undecided-chao');
+      if (sUC) sUC.value = appState.undecidedChao;
+      if (nUC) nUC.value = appState.undecidedChao;
+      if (tUC) tUC.textContent = appState.undecidedChao.toFixed(1);
+
+      const sUO = document.getElementById('slider-undecided-other');
+      const nUO = document.getElementById('num-undecided-other');
+      const tUO = document.getElementById('txt-undecided-other');
+      if (sUO) sUO.value = appState.undecidedOther;
+      if (nUO) nUO.value = appState.undecidedOther;
+      if (tUO) tUO.textContent = appState.undecidedOther.toFixed(1);
+
+      const sUA = document.getElementById('slider-undecided-abstain');
+      const nUA = document.getElementById('num-undecided-abstain');
+      const tUA = document.getElementById('txt-undecided-abstain');
+      if (sUA) sUA.value = appState.undecidedAbstain;
+      if (nUA) nUA.value = appState.undecidedAbstain;
+      if (tUA) tUA.textContent = appState.undecidedAbstain.toFixed(1);
+
+      // 模組二
+      const sBD = document.getElementById('slider-blue-defection');
+      const nBD = document.getElementById('num-blue-defection');
+      const tBD = document.getElementById('txt-blue-defection');
+      if (sBD) sBD.value = appState.blueDefection;
+      if (nBD) nBD.value = appState.blueDefection;
+      if (tBD) tBD.textContent = appState.blueDefection.toFixed(1);
+
+      const sGL = document.getElementById('slider-green-loyalty');
+      const nGL = document.getElementById('num-green-loyalty');
+      const tGL = document.getElementById('txt-green-loyalty');
+      if (sGL) sGL.value = appState.greenLoyalty;
+      if (nGL) nGL.value = appState.greenLoyalty;
+      if (tGL) tGL.textContent = appState.greenLoyalty.toFixed(1);
+
+      const sTC = document.getElementById('slider-third-to-chao');
+      const nTC = document.getElementById('num-third-to-chao');
+      const tTC = document.getElementById('txt-third-to-chao');
+      if (sTC) sTC.value = appState.thirdToChao;
+      if (nTC) nTC.value = appState.thirdToChao;
+      if (tTC) tTC.textContent = appState.thirdToChao.toFixed(1);
+
+      const sTS = document.getElementById('slider-third-to-sun');
+      const nTS = document.getElementById('num-third-to-sun');
+      const tTS = document.getElementById('txt-third-to-sun');
+      if (sTS) sTS.value = appState.thirdToSun;
+      if (nTS) nTS.value = appState.thirdToSun;
+      if (tTS) tTS.textContent = appState.thirdToSun.toFixed(1);
+
+      // 模組三
+      const sTR = document.getElementById('slider-turnout-rate');
+      const nTR = document.getElementById('num-turnout-rate');
+      const tTR = document.getElementById('txt-turnout-rate');
+      if (sTR) sTR.value = appState.turnoutRate;
+      if (nTR) nTR.value = appState.turnoutRate;
+      if (tTR) tTR.textContent = appState.turnoutRate.toFixed(1);
+
+      const sWB = document.getElementById('slider-weight-bade');
+      const nWB = document.getElementById('num-weight-bade');
+      const tWB = document.getElementById('txt-weight-bade');
+      if (sWB) sWB.value = appState.weightBade;
+      if (nWB) nWB.value = appState.weightBade;
+      if (tWB) tWB.textContent = appState.weightBade.toFixed(2);
+    }
+
+    // --- 核心得票率預測計量演算法 ---
+    function computeElectionPrediction(state, districtWeightModifier = 1.0) {
+      // 1. 檢核未表態總和並進行歸一化
+      const totalUndecidedShare = state.undecidedSun + state.undecidedChao + state.undecidedOther + state.undecidedAbstain;
+      const normFactor = totalUndecidedShare > 0 ? (100 / totalUndecidedShare) : 1;
+      
+      const pSunUndec = (state.undecidedSun * normFactor) / 100;
+      const pChaoUndec = (state.undecidedChao * normFactor) / 100;
+      const pOtherUndec = (state.undecidedOther * normFactor) / 100;
+
+      // 2. 轉移率換算小數
+      const rBlueDefect = state.blueDefection / 100;   // 藍營流失至趙
+      const rThirdChao = state.thirdToChao / 100;      // 第三勢力流向趙
+      const rThirdSun = state.thirdToSun / 100;        // 第三勢力流向孫
+
+      // 3. 基礎表態選票轉移
+      // 孫大千得票來源：原始藍軍表態扣除流失 + 未表態分流 + 第三勢力分流
+      const sunRetained = RAW_VOTES.sun * (1 - rBlueDefect);
+      const sunFromUndec = UNDECIDED_TOTAL * pSunUndec;
+      const sunFromThird = THIRD_TOTAL * rThirdSun;
+      let effectiveSun = sunRetained + sunFromUndec + sunFromThird;
+
+      // 趙正宇得票來源：原始無黨表態 + 藍軍流失吸納 + 未表態分流 + 第三勢力棄保流入
+      const chaoBlueInflow = RAW_VOTES.sun * rBlueDefect;
+      const chaoFromUndec = UNDECIDED_TOTAL * pChaoUndec;
+      const chaoFromThird = THIRD_TOTAL * rThirdChao;
+      let effectiveChao = RAW_VOTES.chao + chaoBlueInflow + chaoFromUndec + chaoFromThird;
+
+      // 其他候選人：第三勢力保留票 + 未表態其他
+      const otherRetained = Math.max(0, THIRD_TOTAL * (1 - rThirdChao - rThirdSun));
+      const otherFromUndec = UNDECIDED_TOTAL * pOtherUndec;
+      let effectiveOther = otherRetained + otherFromUndec;
+
+      // 4. 八德等區域動員乘數微調
+      if (districtWeightModifier !== 1.0) {
+        // 八德區趙正宇組織實力相對強，動員乘數對趙產生微幅放大效應
+        effectiveChao *= districtWeightModifier;
+      }
+
+      const totalValidEffective = effectiveSun + effectiveChao + effectiveOther;
+      
+      const sunPct = (effectiveSun / totalValidEffective) * 100;
+      const chaoPct = (effectiveChao / totalValidEffective) * 100;
+      const otherPct = (effectiveOther / totalValidEffective) * 100;
+
+      // 推估總得票數
+      const estimatedTotalTurnout = TOTAL_ELECTORATE * (state.turnoutRate / 100);
+      const validVotes = estimatedTotalTurnout * 0.985; // 扣除廢票率 1.5%
+
+      const sunVotes = Math.round(validVotes * (sunPct / 100));
+      const chaoVotes = Math.round(validVotes * (chaoPct / 100));
+      const otherVotes = Math.round(validVotes * (otherPct / 100));
+
+      return {
+        sunPct,
+        chaoPct,
+        otherPct,
+        sunVotes,
+        chaoVotes,
+        otherVotes,
+        margin: chaoPct - sunPct, // 正值為趙領先，負值為孫領先
+        validVotes: Math.round(validVotes)
+      };
+    }
+
+    // --- 蒙地卡羅動態模擬 (N=1,000次抽樣試驗) ---
+    function runMonteCarloSimulation(state, runs = 1000) {
+      let sunWins = 0;
+      let chaoWins = 0;
+      const margins = [];
+
+      // 抽樣誤差標準差 (N=1030時，p=0.5之二項標準誤約為 1.55%)
+      const baseSE = 1.55;
+
+      for (let i = 0; i < runs; i++) {
+        // Box-Muller 產生標準常態隨機數
+        const u1 = Math.max(1e-7, Math.random());
+        const u2 = Math.random();
+        const randNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+
+        // 參數擾動波動（未表態與轉移的不確定性 ±1.2%）
+        const u3 = Math.max(1e-7, Math.random());
+        const u4 = Math.random();
+        const randTurnoutNoise = Math.sqrt(-2.0 * Math.log(u3)) * Math.sin(2.0 * Math.PI * u4) * 0.8;
+
+        const simulatedState = {
+          ...state,
+          blueDefection: Math.max(0, Math.min(45, state.blueDefection + randTurnoutNoise)),
+          undecidedChao: Math.max(0, Math.min(75, state.undecidedChao + randTurnoutNoise * 1.5))
+        };
+
+        const result = computeElectionPrediction(simulatedState, state.weightBade);
+        
+        // 加入抽樣誤差波動至雙方得票率差距
+        const marginNoise = randNormal * baseSE * Math.sqrt(2);
+        const simMargin = result.margin + marginNoise;
+
+        margins.push(simMargin);
+        if (simMargin > 0) {
+          chaoWins++;
+        } else {
+          sunWins++;
+        }
+      }
+
+      const chaoProb = (chaoWins / runs) * 100;
+      const sunProb = (sunWins / runs) * 100;
+
+      // 計算統計信賴區間 (95% CI)
+      margins.sort((a, b) => a - b);
+      const ciLower = margins[Math.floor(runs * 0.025)];
+      const ciUpper = margins[Math.floor(runs * 0.975)];
+
+      // 產生差距直方圖數據 (區間分佈 -15% 到 +15%)
+      const bins = [];
+      const binLabels = [];
+      const binStep = 1.5;
+      for (let b = -12; b <= 12; b += binStep) {
+        bins.push({ min: b, max: b + binStep, count: 0 });
+        binLabels.push(`${b > 0 ? '+' : ''}${b.toFixed(1)}%`);
+      }
+
+      margins.forEach(m => {
+        for (let j = 0; j < bins.length; j++) {
+          if (m >= bins[j].min && m < bins[j].max) {
+            bins[j].count++;
+            break;
+          }
+        }
+      });
+
+      return {
+        sunProb,
+        chaoProb,
+        ciLower,
+        ciUpper,
+        binLabels,
+        binCounts: bins.map(b => b.count)
+      };
+    }
+
+    // --- 計算行政區分區預估得票 ---
+    function computeDistrictBreakdown(state) {
+      return DISTRICT_DATA.map(dist => {
+        // 各行政區基準參數：八德區受 weightBade 影響，中壢區眷村深藍度較高
+        let localBlueDefection = state.blueDefection;
+        let localUndecidedChao = state.undecidedChao;
+        let localUndecidedSun = state.undecidedSun;
+
+        if (dist.name === '八德區') {
+          localBlueDefection *= state.weightBade;
+          localUndecidedChao *= 1.08;
+          localUndecidedSun *= 0.92;
+        } else if (dist.name === '中壢區(興仁里等12里)') {
+          localBlueDefection *= 0.65; // 深藍眷村流失率低
+          localUndecidedSun *= 1.25;
+          localUndecidedChao *= 0.75;
+        } else if (dist.name === '復興區') {
+          localBlueDefection *= 0.4;
+          localUndecidedSun *= 1.35;
+          localUndecidedChao *= 0.65;
+        }
+
+        const norm = (localUndecidedSun + localUndecidedChao + state.undecidedOther + state.undecidedAbstain) || 100;
+        const pS = (localUndecidedSun / norm);
+        const pC = (localUndecidedChao / norm);
+        const pO = (state.undecidedOther / norm);
+
+        const rB = localBlueDefection / 100;
+        const rTC = state.thirdToChao / 100;
+        const rTS = state.thirdToSun / 100;
+
+        const sunV = (dist.sunRaw * (1 - rB)) + (dist.undecRaw * pS) + (dist.thirdRaw * rTS);
+        const chaoV = (dist.chaoRaw) + (dist.sunRaw * rB) + (dist.undecRaw * pC) + (dist.thirdRaw * rTC);
+        const otherV = Math.max(0, dist.thirdRaw * (1 - rTC - rTS)) + (dist.undecRaw * pO);
+
+        const totalV = sunV + chaoV + otherV;
+        const sunRate = (sunV / totalV) * 100;
+        const chaoRate = (chaoV / totalV) * 100;
+        const otherRate = (otherV / totalV) * 100;
+
+        const estDistrictVotes = Math.round(dist.electorate * (state.turnoutRate / 100) * 0.985);
+        const sunDistVotes = Math.round(estDistrictVotes * (sunRate / 100));
+        const chaoDistVotes = Math.round(estDistrictVotes * (chaoRate / 100));
+
+        return {
+          name: dist.name,
+          code: dist.code,
+          n: dist.n,
+          pct: (dist.pct * 100).toFixed(1),
+          electorate: dist.electorate,
+          estVotes: estDistrictVotes,
+          sunRate,
+          chaoRate,
+          otherRate,
+          sunDistVotes,
+          chaoDistVotes,
+          leader: chaoRate > sunRate ? '趙正宇' : '孫大千',
+          leadGap: Math.abs(chaoRate - sunRate).toFixed(1)
+        };
+      });
+    }
+
+    // --- 全局重新計算與 UI 渲染 ---
+    function recalculateAll() {
+      // 1. 檢核歸向總和提示
+      const sumBadge = document.getElementById('alloc-sum-badge');
+      if (sumBadge) {
+        const sumVal = (appState.undecidedSun + appState.undecidedChao + appState.undecidedOther + appState.undecidedAbstain).toFixed(1);
+        if (Math.abs(sumVal - 100) < 0.2) {
+          sumBadge.textContent = '100% (有效封閉配平)';
+          sumBadge.style.color = 'var(--positive)';
+        } else {
+          sumBadge.textContent = `${sumVal}% (模型已自動等比歸一)`;
+          sumBadge.style.color = 'var(--warning)';
+        }
+      }
+
+      // 2. 核心得票率計算
+      const pred = computeElectionPrediction(appState, appState.weightBade);
+
+      // 3. 蒙地卡羅勝率計算
+      const mc = runMonteCarloSimulation(appState, 1000);
+
+      // 4. 更新頂部 Hero KPI 卡片
+      const elSunRate = document.getElementById('stat-sun-rate');
+      const elSunVotes = document.getElementById('stat-sun-votes');
+      const elSunCI = document.getElementById('stat-sun-ci');
+      if (elSunRate) elSunRate.textContent = `${pred.sunPct.toFixed(1)}%`;
+      if (elSunVotes) elSunVotes.textContent = pred.sunVotes.toLocaleString();
+      if (elSunCI) elSunCI.textContent = `±${(1.96 * 1.55).toFixed(1)}%`;
+
+      const elChaoRate = document.getElementById('stat-chao-rate');
+      const elChaoVotes = document.getElementById('stat-chao-votes');
+      const elChaoCI = document.getElementById('stat-chao-ci');
+      if (elChaoRate) elChaoRate.textContent = `${pred.chaoPct.toFixed(1)}%`;
+      if (elChaoVotes) elChaoVotes.textContent = pred.chaoVotes.toLocaleString();
+      if (elChaoCI) elChaoCI.textContent = `±${(1.96 * 1.55).toFixed(1)}%`;
+
+      const elOtherRate = document.getElementById('stat-other-rate');
+      const elOtherVotes = document.getElementById('stat-other-votes');
+      if (elOtherRate) elOtherRate.textContent = `${pred.otherPct.toFixed(1)}%`;
+      if (elOtherVotes) elOtherVotes.textContent = pred.otherVotes.toLocaleString();
+
+      // 勝率計量槽
+      const elProbSunLabel = document.getElementById('label-prob-sun');
+      const elProbChaoLabel = document.getElementById('label-prob-chao');
+      const elMeterSun = document.getElementById('meter-prob-sun');
+      const elMeterChao = document.getElementById('meter-prob-chao');
+      if (elProbSunLabel) elProbSunLabel.textContent = `${mc.sunProb.toFixed(1)}%`;
+      if (elProbChaoLabel) elProbChaoLabel.textContent = `${mc.chaoProb.toFixed(1)}%`;
+      if (elMeterSun) {
+        elMeterSun.style.width = `${mc.sunProb}%`;
+        elMeterSun.textContent = mc.sunProb > 15 ? `孫 ${mc.sunProb.toFixed(0)}%` : '';
+      }
+      if (elMeterChao) {
+        elMeterChao.style.width = `${mc.chaoProb}%`;
+        elMeterChao.textContent = mc.chaoProb > 15 ? `趙 ${mc.chaoProb.toFixed(0)}%` : '';
+      }
+
+      // 判定徽章
+      const elBadgeVerdict = document.getElementById('badge-verdict');
+      const elLeadMargin = document.getElementById('stat-lead-margin');
+      if (elLeadMargin) {
+        if (pred.margin > 0) {
+          elLeadMargin.textContent = `趙領先 ${pred.margin.toFixed(1)}%`;
+          elLeadMargin.style.color = 'var(--tertiary)';
+        } else if (pred.margin < 0) {
+          elLeadMargin.textContent = `孫領先 ${Math.abs(pred.margin).toFixed(1)}%`;
+          elLeadMargin.style.color = 'var(--secondary)';
+        } else {
+          elLeadMargin.textContent = `精準平手 (0.0%)`;
+          elLeadMargin.style.color = 'var(--on-surface)';
+        }
+      }
+
+      if (elBadgeVerdict) {
+        if (mc.chaoProb >= 70) {
+          elBadgeVerdict.textContent = '趙正宇 顯著優勢';
+          elBadgeVerdict.style.backgroundColor = '#d1fae5';
+          elBadgeVerdict.style.color = 'var(--tertiary)';
+        } else if (mc.sunProb >= 70) {
+          elBadgeVerdict.textContent = '孫大千 顯著優勢';
+          elBadgeVerdict.style.backgroundColor = '#dbeafe';
+          elBadgeVerdict.style.color = 'var(--secondary)';
+        } else if (mc.chaoProb >= 50) {
+          elBadgeVerdict.textContent = '趙正宇 審慎微幅領先';
+          elBadgeVerdict.style.backgroundColor = 'var(--surface-container-high)';
+          elBadgeVerdict.style.color = 'var(--on-surface)';
+        } else {
+          elBadgeVerdict.textContent = '孫大千 審慎微幅領先';
+          elBadgeVerdict.style.backgroundColor = 'var(--surface-container-high)';
+          elBadgeVerdict.style.color = 'var(--on-surface)';
+        }
+      }
+
+      // 5. 更新分區表格
+      const distResults = computeDistrictBreakdown(appState);
+      renderDistrictTable(distResults);
+
+      // 6. 更新圖表視覺化
+      updateCharts(pred, mc, distResults);
+
+      // 7. 保存持久化狀態
+      persistCurrentState();
+    }
+
+    // --- 表格渲染 ---
+    function renderDistrictTable(distList) {
+      const tbody = document.getElementById('district-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      distList.forEach(item => {
+        const tr = document.createElement('tr');
+        const isChaoLead = item.leader === '趙正宇';
+        tr.innerHTML = `
+          <td class="mono-num">${item.code}</td>
+          <td><strong>${item.name}</strong></td>
+          <td class="num">${item.n}</td>
+          <td class="num">${item.pct}%</td>
+          <td class="num">${item.electorate.toLocaleString()}</td>
+          <td class="num" style="color:var(--secondary); font-weight:${!isChaoLead ? '700' : '400'};">
+            ${item.sunRate.toFixed(1)}% <span style="font-size:0.75rem; color:var(--on-surface-variant);">(${item.sunDistVotes.toLocaleString()}票)</span>
+          </td>
+          <td class="num" style="color:var(--tertiary); font-weight:${isChaoLead ? '700' : '400'};">
+            ${item.chaoRate.toFixed(1)}% <span style="font-size:0.75rem; color:var(--on-surface-variant);">(${item.chaoDistVotes.toLocaleString()}票)</span>
+          </td>
+          <td class="num">
+            <span class="tag-badge" style="border-color:${isChaoLead ? 'var(--tertiary)' : 'var(--secondary)'}; color:${isChaoLead ? 'var(--tertiary)' : 'var(--secondary)'};">
+              ${item.leader} (+${item.leadGap}%)
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- Chart.js 圖表初始化與更新 ---
+    function initCharts() {
+      // 1. 得票率與原始民調比較圖
+      const ctxVote = document.getElementById('chart-vote-share');
+      if (ctxVote) {
+        voteShareChartInstance = new Chart(ctxVote, {
+          type: 'bar',
+          data: {
+            labels: ['孫大千 (國民黨)', '趙正宇 (無黨/泛綠)', '其他第三勢力'],
+            datasets: [
+              {
+                label: '預估最終得票率 (%)',
+                data: [34.5, 20.8, 7.2],
+                backgroundColor: ['#1d4ed8', '#059669', '#d97706'],
+                borderColor: '#0f172a',
+                borderWidth: 1.5,
+                borderRadius: 2
+              },
+              {
+                label: '原始民調表態率 (%)',
+                data: [34.5, 20.8, 7.2],
+                backgroundColor: '#cbd5e1',
+                borderColor: '#94a3b8',
+                borderWidth: 1,
+                borderRadius: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  font: { family: 'Schibsted Grotesk', size: 12 },
+                  color: '#0f172a',
+                  boxWidth: 14
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return ` ${context.dataset.label}: ${context.raw.toFixed(1)}%`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 70,
+                ticks: {
+                  font: { family: 'Roboto Mono', size: 11 },
+                  callback: val => `${val}%`
+                },
+                grid: { color: '#e2e8f0' }
+              },
+              x: {
+                ticks: {
+                  font: { family: 'Schibsted Grotesk', size: 12, weight: 600 },
+                  color: '#0f172a'
+                },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      // 2. 蒙地卡羅得票差距模擬直方圖
+      const ctxMC = document.getElementById('chart-monte-carlo');
+      if (ctxMC) {
+        monteCarloChartInstance = new Chart(ctxMC, {
+          type: 'bar',
+          data: {
+            labels: [],
+            datasets: [{
+              label: '模擬抽樣次數 (N=1000)',
+              data: [],
+              backgroundColor: function(context) {
+                const label = context.chart.data.labels[context.dataIndex];
+                if (!label) return '#94a3b8';
+                const val = parseFloat(label);
+                return val > 0 ? '#059669' : '#1d4ed8';
+              },
+              borderRadius: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: function(items) {
+                    const l = items[0].label;
+                    const val = parseFloat(l);
+                    return val > 0 ? `趙正宇領先 ${l}` : `孫大千領先 ${Math.abs(val)}%`;
+                  },
+                  label: function(context) {
+                    return ` 模擬出現次數: ${context.raw} 次 (${(context.raw / 10).toFixed(1)}%)`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { font: { family: 'Roboto Mono', size: 10 } },
+                grid: { color: '#e2e8f0' }
+              },
+              x: {
+                ticks: { font: { family: 'Roboto Mono', size: 9 }, maxRotation: 45, minRotation: 45 },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      // 3. 四大行政區得票結構圖
+      const ctxDist = document.getElementById('chart-district-breakdown');
+      if (ctxDist) {
+        districtChartInstance = new Chart(ctxDist, {
+          type: 'bar',
+          data: {
+            labels: ['八德區 (51.7%)', '大溪區 (24.0%)', '中壢12里 (20.4%)', '復興區 (2.8%)'],
+            datasets: [
+              {
+                label: '孫大千 (%)',
+                data: [45, 52, 60, 68],
+                backgroundColor: '#1d4ed8',
+                borderRadius: 2
+              },
+              {
+                label: '趙正宇 (%)',
+                data: [52, 44, 35, 28],
+                backgroundColor: '#059669',
+                borderRadius: 2
+              }
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: { font: { family: 'Schibsted Grotesk', size: 11 }, boxWidth: 12 }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(c) {
+                    return ` ${c.dataset.label}: ${c.raw.toFixed(1)}%`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                max: 80,
+                ticks: {
+                  font: { family: 'Roboto Mono', size: 10 },
+                  callback: v => `${v}%`
+                },
+                grid: { color: '#e2e8f0' }
+              },
+              y: {
+                ticks: { font: { family: 'Schibsted Grotesk', size: 11, weight: 600 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function updateCharts(pred, mc, distList) {
+      // 1. 得票比較圖更新
+      if (voteShareChartInstance) {
+        voteShareChartInstance.data.datasets[0].data = [
+          pred.sunPct,
+          pred.chaoPct,
+          pred.otherPct
+        ];
+        voteShareChartInstance.update();
+      }
+
+      // 2. 蒙地卡羅模擬直方圖更新
+      if (monteCarloChartInstance) {
+        monteCarloChartInstance.data.labels = mc.binLabels;
+        monteCarloChartInstance.data.datasets[0].data = mc.binCounts;
+        monteCarloChartInstance.update();
+      }
+
+      // 3. 行政區比較橫條圖更新
+      if (districtChartInstance) {
+        const top4 = distList.slice(0, 4);
+        districtChartInstance.data.labels = top4.map(d => `${d.name} (${d.pct}%)`);
+        districtChartInstance.data.datasets[0].data = top4.map(d => d.sunRate);
+        districtChartInstance.data.datasets[1].data = top4.map(d => d.chaoRate);
+        districtChartInstance.update();
+      }
+    }
+
+    // --- 摘要報告複製與匯出 ---
+    function generateReportText() {
+      const pred = computeElectionPrediction(appState, appState.weightBade);
+      const mc = runMonteCarloSimulation(appState, 1000);
+      const now = new Date().toLocaleDateString('zh-TW');
+
+      return `【桃園市第六選區得票率預測報告】
+主持人 / 製作資訊：銘傳大學公共事務與行政管理學系 劉祥得 教授
+分析基準：電訪原始民調有效樣本 N=1,030（95%信心水準 ±3.05%）
+試算日期：${now}
+
+一、當前模型參數設定：
+• 未表態選民（37.6%）歸向：孫大千 ${appState.undecidedSun.toFixed(1)}%、趙正宇 ${appState.undecidedChao.toFixed(1)}%、其他 ${appState.undecidedOther.toFixed(1)}%、未投票/廢票 ${appState.undecidedAbstain.toFixed(1)}%
+• 泛藍支持者轉投趙正宇（本土藍外溢率）：${appState.blueDefection.toFixed(1)}%
+• 泛綠支持者集結整合率：${appState.greenLoyalty.toFixed(1)}%
+• 第三勢力棄保流向：趙正宇 ${appState.thirdToChao.toFixed(1)}%、孫大千 ${appState.thirdToSun.toFixed(1)}%
+• 選區整體投票率：${appState.turnoutRate.toFixed(1)}%、八德動員乘數：${appState.weightBade.toFixed(2)}x
+
+二、得票率與勝選率預估結果：
+• 孫大千（國民黨）：得票率 ${pred.sunPct.toFixed(2)}% ｜ 預估票數：約 ${pred.sunVotes.toLocaleString()} 票 ｜ 當選機率：${mc.sunProb.toFixed(1)}%
+• 趙正宇（無黨籍）：得票率 ${pred.chaoPct.toFixed(2)}% ｜ 預估票數：約 ${pred.chaoVotes.toLocaleString()} 票 ｜ 當選機率：${mc.chaoProb.toFixed(1)}%
+• 其他候選人：得票率 ${pred.otherPct.toFixed(2)}% ｜ 預估票數：約 ${pred.otherVotes.toLocaleString()} 票
+• 預估領先差距：${pred.margin > 0 ? `趙正宇領先 +${pred.margin.toFixed(2)}%` : `孫大千領先 +${Math.abs(pred.margin).toFixed(2)}%`}
+• 蒙地卡羅 95% 信賴區間：差距落在 [${mc.ciLower.toFixed(1)}%, ${mc.ciUpper.toFixed(1)}%]
+
+三、學術分析摘要：
+在電訪調查樣本中，受訪者政黨偏好泛藍（國民黨+親民黨+新黨）高達 77.2%，但趙正宇憑藉在八德區深厚之基層實力，若成功撬動泛藍 12%~18% 選票，並吸納過半未表態選民，選情將呈現逆轉突破。`;
+    }
+
+    function copyForecastSummary() {
+      const text = generateReportText();
+      const toast = document.getElementById('toast-msg');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('已成功複製「預測模型完整分析報告」至剪貼簿！');
+        }).catch(() => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('已成功複製「預測模型完整分析報告」至剪貼簿！');
+      } catch (err) {
+        showToast('瀏覽器限制剪貼簿操作，請手動查看資料。');
+      }
+      document.body.removeChild(textArea);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast-msg');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3500);
+    }
+
+    function exportForecastReport() {
+      const text = generateReportText();
+      if (window.notebookAppApi && typeof window.notebookAppApi.triggerFileDownload === 'function') {
+        window.notebookAppApi.triggerFileDownload({
+          content: text,
+          contentType: 'text/plain;charset=utf-8',
+          encoding: 'utf-8',
+          filename: '桃園第六選區立委得票率預測報告_劉祥得教授.txt'
+        });
+        showToast('已調用 NotebookAppApi 啟動檔案下載！');
+      } else {
+        // 瀏覽器標準 Blob 下載 fallback
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '桃園第六選區立委得票率預測報告_劉祥得教授.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('已完成預測報告純文字檔下載！');
+      }
+    }
+
+    // --- State Persistence API Integration ---
+    async function persistCurrentState() {
+      if (window.notebookAppApi && typeof window.notebookAppApi.setAppState === 'function') {
+        try {
+          await window.notebookAppApi.setAppState(appState);
+        } catch (e) {
+          console.warn('NotebookAppApi state persistence error:', e);
+        }
+      }
+    }
+
+    async function restorePersistentState() {
+      if (window.notebookAppApi && typeof window.notebookAppApi.getAppState === 'function') {
+        try {
+          const savedState = await window.notebookAppApi.getAppState();
+          if (savedState && typeof savedState === 'object') {
+            appState = { ...appState, ...savedState };
+            updateAllControlInputs();
+            updateScenarioButtonStyles();
+          }
+        } catch (e) {
+          console.warn('NotebookAppApi getAppState error:', e);
+        }
+      }
+    }
+
+    // --- 頁面初始化生命週期 ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 1. 初始化圖示
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+
+      // 2. 初始化圖表
+      initCharts();
+
+      // 3. 嘗試從持久化狀態還原
+      await restorePersistentState();
+
+      // 4. 初次計算與渲染
+      recalculateAll();
+
+      // 5. 通知 Host 應用就緒
+      if (window.notebookAppApi && typeof window.notebookAppApi.notifyAppReady === 'function') {
+        window.notebookAppApi.notifyAppReady();
+      }
+    });
+  </script>
+</body>
+</html>
